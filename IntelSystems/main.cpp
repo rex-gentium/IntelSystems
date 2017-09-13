@@ -19,23 +19,31 @@ bool checkLines(BMP image);
 bool checkAngle(Sample s);
 int countAngles(BMP image);
 
+void guessFigure(const char * file);
 bool checkBlank(BMP image);
 void printImage(BMP image);
 void printResult(bool blank, bool circuit, int angleCount);
 
 int main() {
+	guessFigure("C:\\dump\\intelsystems\\test1\\rectangle.bmp");
+	guessFigure("C:\\dump\\intelsystems\\test1\\triangle.bmp");
+	guessFigure("C:\\dump\\intelsystems\\test1\\line.bmp");
+	guessFigure("C:\\dump\\intelsystems\\test1\\ellipse.bmp");
+	system("PAUSE");
+	return 0;
+}
+
+void guessFigure(const char * file) {
 	BMP image;
-	image.ReadFromFile("D:\\image.bmp");
-	printImage(image);
+	image.ReadFromFile(file);
+	cout << "Loaded file " << file << endl;
+	//printImage(image);
 	bool isBlank = checkBlank(image);
 	if (isBlank)
 		printResult(isBlank, false, 0);
 	bool hasCircuit = checkCircuit(image);
-	//bool hasLine = checkLines(image);
 	int angleCount = countAngles(image);
 	printResult(isBlank, hasCircuit, angleCount);
-	system("PAUSE");
-	return 0;
 }
 
 bool checkCircuit(BMP image)
@@ -54,10 +62,10 @@ bool checkCircuit(BMP image)
 	for (int ver = 0; ver < img.TellHeight(); ver++)
 		for (int hor = 0; hor < img.TellWidth(); hor++)
 			if (isOfColor(*img(hor, ver), whiteColor)) {
-				printImage(img);
+				//printImage(img);
 				return true;
 			}
-	printImage(img);
+	//printImage(img);
 	return false;
 }
 
@@ -96,7 +104,7 @@ void eraseSample(BMP &image, int hor, int ver)
 	for (int i = 0; i < SAMPLE_SIZE; ++i)
 		for (int j = 0; j < SAMPLE_SIZE; ++j)
 			image.SetPixel(hor + j, ver + i, whiteColor);
-	printImage(image);
+	//printImage(image);
 }
 
 bool checkLines(BMP image)
@@ -182,8 +190,8 @@ void printResult(bool blank, bool circuit, int angleCount)
 		}
 	else 
 		switch (angleCount) {
-		case 0: cout << "LINE or CURVE"; break;
-		default: cout << "POLYLINE or POLYCURVE";
+		case 0: cout << "LINE"; break;
+		default: cout << "POLYLINE";
 		}
 	cout << endl;
 }
