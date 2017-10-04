@@ -11,6 +11,7 @@ namespace TextSearchEngine
     class TextSearcher
     {
         private String path;
+        /* кэш стемов - по названию файла хранит частоты стемов в файле */
         private Dictionary<string, Dictionary<string, int>> stemCash;
 
         public TextSearcher() : this("") { }
@@ -80,15 +81,14 @@ namespace TextSearchEngine
             if (!stemCash[file].ContainsKey(stem))
                 return 0.0;
             int stemCountInFile = stemCash[file][stem];
-            // посчитать частоту стема во всех остальных файлах
-            int stemCountInOtherFiles = 0;
-            foreach (string otherFile in stemCash.Keys)
-            {
-                if (otherFile.Equals(file)) continue;
-                if (stemCash[otherFile].ContainsKey(stem))
-                    stemCountInOtherFiles += stemCash[otherFile][stem];
-            }
-            return (double)stemCountInFile / (double)stemCountInOtherFiles;
+            double stemFreq = stemCountInFile / (double) stemCash[file].Count;
+            // посчитать обратную частоту стема
+            int filesWithStemCount = 0;
+            foreach (string filename in stemCash.Keys)
+                if (stemCash[filename].ContainsKey(stem))
+                    ++filesWithStemCount;
+            double inverseStemFreq = stemCash.Keys.Count / (double) filesWithStemCount;
+            return stemFreq * inverseStemFreq;
         }
     }
 }

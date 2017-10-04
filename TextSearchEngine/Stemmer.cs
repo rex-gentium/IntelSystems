@@ -12,7 +12,7 @@ namespace TextSearchEngine
         public static readonly char Space = ' ';
         public static readonly char[] Digits = "0123456789".ToCharArray();
         public static readonly char[] Alphabet = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя".ToCharArray();
-        public static readonly string[] StopWords = File.ReadAllLines("D:/stopwords.txt", Encoding.UTF8)
+        public static readonly string[] StopWords = File.ReadAllLines("D:/dump/stopwords.txt", Encoding.UTF8)
             .Union(Digits.Concat(Alphabet).Select(c => c.ToString()))
             .ToArray();
         public static readonly char[] Vowels = "аеёиоуыэюя".ToCharArray();

@@ -11,7 +11,7 @@ namespace TextSearchEngine
     {
         static void Main(string[] args)
         {
-            String directory = (args.Length > 0) ? args[0] : "D:/dump/";
+            String directory = (args.Length > 0) ? args[0] : "C:/dump/intelsystems/";
             Console.InputEncoding = System.Text.Encoding.Unicode;
             Console.OutputEncoding = System.Text.Encoding.Unicode;
 
@@ -26,11 +26,14 @@ namespace TextSearchEngine
                 else
                 {
                     SortedSet<Tuple<string, double>> searchRes = searcher.SearchForQuery(query);
-                    Console.WriteLine("Результаты поиска в " + directory + ":");
+                    Console.WriteLine("Результаты поиска в " + directory + ":\n");
                     foreach (Tuple<string, double> t in searchRes)
-                        Console.WriteLine("Файл: " + Path.GetFileName(t.Item1)
-                            + "\nРелевантность: " + t.Item2.ToString() + "\n");
+                        if (t.Item2 > 0.0)
+                            Console.WriteLine("Файл: " + Path.GetFileName(t.Item1)
+                                + "\nРелевантность: " + t.Item2.ToString() + "\n");
                 }
+                Console.ReadLine();
+                Console.Clear();
             }
         }
     }
