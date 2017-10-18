@@ -13,6 +13,8 @@ namespace TextSearchEngine
         private String path;
         /* кэш стемов - по названию файла хранит частоты стемов в файле */
         private Dictionary<string, Dictionary<string, int>> stemCash;
+        /* кэш весов - по названию файла хранит многомерный вектор весов стемов в файле */
+        private Dictionary<string, Dictionary<string, double>> weightCash;
 
         public TextSearcher() : this("") { }
 
@@ -21,6 +23,7 @@ namespace TextSearchEngine
             path = filesPath;
             String[] files = Directory.GetFiles(path, "*.txt", SearchOption.TopDirectoryOnly);
             stemCash = new Dictionary<string, Dictionary<string, int>>(files.Length);
+            weightCash = new Dictionary<string, Dictionary<string, double>>(files.Length);
             foreach (String file in files)
             {
                 String text = File.ReadAllText(file);
@@ -28,9 +31,16 @@ namespace TextSearchEngine
                     .Except(Stemmer.StopWords)
                     .Select(token => Stemmer.Stem(token))
                     .ToArray();
-                Dictionary<string, int> freqTable = BuildFrequencyTable(stems);
-                stemCash[file] = freqTable;
+                stemCash[file] = BuildFrequencyTable(stems);
             }
+            foreach (string file in stemCash.Keys)
+            {
+                Dictionary<string, double> weightTable = new Dictionary<string, double>();
+                foreach (String stem in stemCash[file].Keys)
+                    weightTable[stem] = GetStemWeightInFile(file, stem);
+                weightCash[file] = weightTable;
+            }
+            //stemCash.Clear();
         }
 
         private Dictionary<string, int> BuildFrequencyTable(string[] stems)
@@ -63,32 +73,62 @@ namespace TextSearchEngine
                     .Except(Stemmer.StopWords)
                     .Select(token => Stemmer.Stem(token))
                     .ToArray();
-            // список пар "имя файла - релевантность файла", отсортированный по убыванию релевантности
-            SortedSet<Tuple<string, double>> fileToRelevance = new SortedSet<Tuple<string, double>>(new RelevanceComparer());
-            foreach (string file in stemCash.Keys)
+            Dictionary<string, double> queryVector = new Dictionary<string, double>(queryStems.Length);
+            Dictionary<string, int> freqTable = BuildFrequencyTable(queryStems);
+            foreach (string stem in queryStems)
             {
-                double fileRelevance = 0.0;
-                foreach (string stem in queryStems)
-                    fileRelevance += GetFileRelevance(file, stem);
-                fileToRelevance.Add(Tuple.Create(file, fileRelevance));
+                double inverseFreq = GetInverseFrequency(stem);
+                queryVector[stem] = freqTable[stem] * inverseFreq;
             }
-            return fileToRelevance;
+            // список пар "имя файла - релевантность файла", отсортированный по убыванию релевантности
+            SortedSet<Tuple<string, double>> fileToScore = new SortedSet<Tuple<string, double>>(new RelevanceComparer());
+            foreach (string file in weightCash.Keys)
+            {
+                double fileScore = GetFileScore(file, queryVector);
+                fileToScore.Add(Tuple.Create(file, fileScore));
+            }
+            return fileToScore;
         }
 
-        private double GetFileRelevance(string file, string stem)
+        private double GetInverseFrequency(string stem)
+        {
+            int filesWithStemCount = 0;
+            foreach (string filename in stemCash.Keys)
+                if (stemCash[filename].ContainsKey(stem))
+                    ++filesWithStemCount;
+            double inverseStemFreq = Math.Log(stemCash.Keys.Count / (double)filesWithStemCount);
+            return inverseStemFreq;
+        }
+
+        private double GetStemWeightInFile(string file, string stem)
         {
             // посчитать частоту стема  файле
             if (!stemCash[file].ContainsKey(stem))
                 return 0.0;
             int stemCountInFile = stemCash[file][stem];
             double stemFreq = stemCountInFile / (double) stemCash[file].Count;
-            // посчитать обратную частоту стема
-            int filesWithStemCount = 0;
-            foreach (string filename in stemCash.Keys)
-                if (stemCash[filename].ContainsKey(stem))
-                    ++filesWithStemCount;
-            double inverseStemFreq = stemCash.Keys.Count / (double) filesWithStemCount;
+            double inverseStemFreq = GetInverseFrequency(stem);
             return stemFreq * inverseStemFreq;
+        }
+
+        private double GetFileScore(string file, Dictionary<string, double> queryVector)
+        {
+            double vectorProd = 0.0;
+            double fileVectorLength = 0.0;
+            double queryVectorLength = 0.0;
+            foreach(string stem in queryVector.Keys)
+            {
+                double weightInFile = (weightCash[file].ContainsKey(stem)) 
+                    ? weightCash[file][stem] : 0.0;
+                double weightInQuery = queryVector[stem];
+                vectorProd += weightInFile * weightInQuery;
+                fileVectorLength += weightInFile * weightInFile;
+                queryVectorLength += weightInQuery * weightInQuery;
+            }
+            fileVectorLength = Math.Sqrt(fileVectorLength);
+            queryVectorLength = Math.Sqrt(queryVectorLength);
+            double lengthProd = fileVectorLength * queryVectorLength;
+            return (lengthProd > 0) ? vectorProd / lengthProd : 0.0;
         }
     }
 }
